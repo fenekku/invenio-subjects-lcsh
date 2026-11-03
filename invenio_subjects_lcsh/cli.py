@@ -9,7 +9,6 @@
 """LCSH Command line tool."""
 
 from datetime import datetime
-from functools import partial, wraps
 from pathlib import Path
 
 import click
@@ -21,12 +20,10 @@ from galter_subjects_utils.reader import get_rdm_subjects, read_csv, read_jsonl
 from galter_subjects_utils.writer import write_csv
 
 from .adapter import generate_replacements
-from .converter import LCSHRDMConverter
+from .converters import LCSHRDMConverter
 from .downloader import LCSHDownloader
-from .mads_rdf_jsonld import (
-    enhance_replacements_w_new_subjects,
-    topics_to_replacements,
-)
+from .filters import valid_heading_filter
+from .readers import LCSHMadsRdfJsonLdReader
 from .scheme import LCSHScheme
 
 defaults = {
@@ -35,41 +32,12 @@ defaults = {
 }
 
 
-option_lcsh_downloads_dir = partial(
-    click.option(
-        "--downloads-dir",
-        "-d",
-        type=click.Path(path_type=Path),
-        default=defaults["downloads-dir"],
-    )
+option_lcsh_downloads_dir = click.option(
+    "--downloads-dir",
+    "-d",
+    type=click.Path(path_type=Path),
+    default=defaults["downloads-dir"],
 )
-
-
-def lcsh_download_options(f):
-    """Encapsulate common LCSH download options."""
-
-    @option_lcsh_downloads_dir
-    @click.option(
-        "--no-cache",
-        default=False,
-        help="Re-download even if already downloaded.",
-        is_flag=True,
-    )
-    @wraps(f)
-    def _wrapped(*args, **kwargs):
-        """Wrap f with common download options."""
-        return f(*args, **kwargs)
-
-    return _wrapped
-
-
-def to_lcsh_downloader_kwargs(parameters):
-    """To LCSHDownloader kwargs."""
-    result = {
-        "cache": not parameters["no_cache"],
-        "directory": Path.cwd() / parameters["downloads_dir"],
-    }
-    return result
 
 
 @click.group()
@@ -78,23 +46,26 @@ def lcsh():
 
 
 @lcsh.command("download")
-@lcsh_download_options
+@option_lcsh_downloads_dir
+@click.option(
+    "--no-cache",
+    default=False,
+    help="Re-download even if already downloaded.",
+    is_flag=True,
+)
 def lcsh_download(**parameters):
     """Download LCSH files."""
-    downloader_kwargs = to_lcsh_downloader_kwargs(parameters)
-    downloader = LCSHDownloader(**downloader_kwargs)
+    downloader = LCSHDownloader(
+        cache=not parameters["no_cache"],
+        directory=Path.cwd() / parameters["downloads_dir"],
+    )
     downloader.download()
 
     print(f"Raw LCSH files written in {parameters['downloads_dir']}/")
 
 
-def to_lcsh_converter_kwargs(downloader):
-    """Provide LCSH converter args from `downloader`."""
-    return {"topics": read_jsonl(downloader.terms_filepath)}
-
-
 @lcsh.command("file")
-@lcsh_download_options
+@option_lcsh_downloads_dir
 @click.option(
     "--output-file",
     "-o",
@@ -103,20 +74,23 @@ def to_lcsh_converter_kwargs(downloader):
 )
 def lcsh_file(**parameters):
     """Generate new LCSH subjects file."""
-    downloader_kwargs = to_lcsh_downloader_kwargs(parameters)
-    downloader = LCSHDownloader(**downloader_kwargs)
+    # 'Empty' downloader just to pass it to reader, so that it can retrieve
+    # relevant filepaths.
+    downloader = LCSHDownloader(directory=parameters["downloads_dir"])
+
+    # Read
+    reader = LCSHMadsRdfJsonLdReader(
+        downloader.terms_filepath,
+        filter=valid_heading_filter,
+    )
 
     # Convert
-    converter_kwargs = to_lcsh_converter_kwargs(downloader)
-    converter = LCSHRDMConverter(**converter_kwargs)
-    converted = converter.convert()
-    # Exclude special automated geographic terms
-    converted_filtered = (s for s in converted if not s["id"].endswith("-781"))
+    converter = LCSHRDMConverter(reader.iter_internal_entries())
 
     # Write
     header = ["id", "scheme", "subject"]
     filepath = write_csv(
-        converted_filtered,
+        converter.iter_rdm_subjects(),
         parameters["output_file"],
         writer_kwargs={"fieldnames": header},
     )
