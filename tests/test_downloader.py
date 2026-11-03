@@ -18,7 +18,7 @@ from invenio_subjects_lcsh.downloader import LCSHDownloader
 
 @contextmanager
 def fake_request_context(url, stream):
-    fp = Path(__file__).parent / "data/fake_lcsh.skosrdf.jsonld.gz"
+    fp = Path(__file__).parent / "data/fake_lcsh.madsrdf.jsonld.gz"
     FakeRequestContext = namedtuple("FakeRequestContext", ["raw"])
     with open(fp, "rb") as f:
         yield FakeRequestContext(raw=f)
