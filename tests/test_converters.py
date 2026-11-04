@@ -1,10 +1,11 @@
-# -*- coding: utf-8 -*-
 #
 # Copyright (C) 2026 Northwestern University.
 #
 # invenio-subjects-lcsh is free software; you can redistribute it and/or
 # modify it under the terms of the MIT License; see LICENSE file for more
 # details.
+
+"""Test converters."""
 
 
 from invenio_subjects_lcsh.converters import LCSHRDMConverter
