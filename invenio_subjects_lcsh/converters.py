@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Copyright (C) 2024-2026 Northwestern University.
 #
@@ -23,7 +22,7 @@ class LCSHRDMConverter:
         """Constructor.
 
         Args:
-            topic (dict - internal entry shape): internal LCSH entry
+            internal_entries (dict - internal entry shape): internal LCSH entry
         """
         self.internal_entries = internal_entries
         self.lcsh = LCSHScheme()
