@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Copyright (C) 2026 Northwestern University.
 #
@@ -25,6 +24,7 @@ from .downloader import LCSHDownloader
 from .filters import valid_heading_filter
 from .readers import LCSHMadsRdfJsonLdReader
 from .scheme import LCSHScheme
+from .sources.mads_rdf_jsonld import topics_to_replacements
 
 defaults = {
     "downloads-dir": Path.cwd(),

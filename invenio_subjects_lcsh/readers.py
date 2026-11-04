@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Copyright (C) 2026 Northwestern University.
 #
@@ -6,8 +5,7 @@
 # modify it under the terms of the MIT License; see LICENSE file for more
 # details.
 
-"""
-Readers for LCSH data dumps.
+"""Readers for LCSH data dumps.
 
 Readers iterate over the content of the data dump, returning
 internal representations of the topic, so that filters or converters have
