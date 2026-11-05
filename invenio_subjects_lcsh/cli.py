@@ -15,16 +15,19 @@ from flask.cli import with_appcontext
 from galter_subjects_utils.adapter import converted_to_subjects
 from galter_subjects_utils.deltor import DeltasGenerator
 from galter_subjects_utils.keeptrace import KeepTrace
-from galter_subjects_utils.reader import get_rdm_subjects, read_csv, read_jsonl
+from galter_subjects_utils.reader import get_rdm_subjects, read_csv
 from galter_subjects_utils.writer import write_csv
 
 from .adapter import generate_replacements
-from .converters import LCSHRDMConverter
+from .converters import LCSHRDMConverter, LCSHReplacementConverter
 from .downloader import LCSHDownloader
-from .filters import valid_heading_filter
+from .filters import (
+    deprecated_since_filter,
+    non_geographic_filter,
+    valid_heading_filter,
+)
 from .readers import LCSHMadsRdfJsonLdReader
 from .scheme import LCSHScheme
-from .sources.mads_rdf_jsonld import topics_to_replacements
 
 defaults = {
     "downloads-dir": Path.cwd(),
@@ -99,42 +102,71 @@ def lcsh_file(**parameters):
 
 
 @lcsh.command("replacements")
-@click.argument(
-    "subjects-file",
-    type=click.Path(path_type=Path, exists=True, dir_okay=False),
+@option_lcsh_downloads_dir
+@click.option(
+    "--lcsh",
+    type=click.Path(path_type=Path),
+    default=Path(__file__).parent / "vocabularies/subjects_lcsh.csv",
+)
+# Coming in next PR
+# @click.option(
+#     "--lcnaf",
+#     type=click.Path(path_type=Path),
+# )
+@click.option(
+    "--since",
+    "-s",
+    default=None,
+    help="Filter for YYYY-MM-DD and later.",
 )
 @click.option(
-    "--since", "-s", default=None, help="Filter for YYYY-MM-DD and later."
-)
-@click.option(
-    "--output-file", "-o", type=click.Path(path_type=Path),
-    default=Path.cwd() / "replacements_lcsh.csv"
+    "--output-file",
+    "-o",
+    type=click.Path(path_type=Path),
+    default=Path.cwd() / "replacements_lcsh.csv",
 )
 def lcsh_replacements(**parameters):
-    """Generate (initial) CSV file of deprecated+replacement LCSH topics.
+    """Generate (initial) CSV file of deprecated w/ replacement LCSH topics.
 
     This file is then parsed by a metadata expert and potentially edited
     for subsequent use in lcsh_deltas. In particular, metadata experts
     should select the id + subject (if any) to replace a deprecated heading
     that has no or multiple replacement options for each such heading.
     """
-    fp_of_subjects = parameters["subjects_file"].expanduser()
+    downloader = LCSHDownloader(directory=parameters["downloads_dir"])
 
     since = parameters["since"]
     since = datetime.strptime(since, "%Y-%m-%d") if since else None
 
-    topics_raw = read_jsonl(fp_of_subjects)
-    # deprecated dicts with replacement id only
-    replacements = topics_to_replacements(topics_raw, since)
-    # fill out corresponding subject if possible
-    # need to read topics again
-    topics_raw = read_jsonl(fp_of_subjects)
-    replacements = enhance_replacements_w_new_subjects(replacements, topics_raw)  # noqa
+    # Read deprecated
+    reader = LCSHMadsRdfJsonLdReader(
+        downloader.terms_filepath,
+        filter=lambda e: (
+            # Deprecated entries have no collections so
+            # authorized_heading_filter cannot be used.
+            # If any non authorized but deprecated headings are picked up
+            # they will simply lead to no-ops. In practice, those have not
+            # been encountered in recent runs.
+            non_geographic_filter(e) and
+            deprecated_since_filter(e, since)
+        )
+    )
+
+    # Sources to use to find labels of ids recommended to replace deprecated
+    # ones
+    sources_for_new_subject_labels = [
+        read_csv(parameters["lcsh"]),
+    ]
+
+    converter = LCSHReplacementConverter(
+        reader.iter_internal_entries(),
+        sources_for_new_subject_labels
+    )
 
     header = ["time", "id", "subject", "new_id", "new_subject", "notes"]
 
     write_csv(
-        replacements,
+        converter.iter_replacements(),  # all in memory anyway
         parameters["output_file"],
         writer_kwargs={"fieldnames": header},
     )
@@ -144,10 +176,9 @@ def lcsh_replacements(**parameters):
 
 @lcsh.command("deltas")
 @click.option(
-    "--subjects-file",
-    "-s",
-    type=click.Path(path_type=Path, exists=True, dir_okay=False),
-    required=True,
+    "--lcsh",
+    type=click.Path(path_type=Path),
+    default=Path(__file__).parent / "vocabularies/subjects_lcsh.csv",
 )
 @click.option(
     "--replacements-file",
@@ -174,16 +205,12 @@ def lcsh_deltas(**parameters):
     )
 
     # Destination subjects
-    fp_of_subjects = parameters["subjects_file"]
-    topics_raw = read_jsonl(fp_of_subjects)
-    converted = LCSHRDMConverter(topics_raw).convert()
-    # Exclude special automated geographic terms
-    converted_filtered = (s for s in converted if not s["id"].endswith("-781"))
-    dst = converted_to_subjects(converted_filtered, prefix=lcsh.prefix)
+    # The generated file actually
+    subjects_rdm = read_csv(parameters["lcsh"])
+    dst = converted_to_subjects(subjects_rdm, prefix=lcsh.prefix)
 
     # Replacements
-    fp_of_replacements = parameters["replacements_file"]
-    replacements_lcsh = read_csv(fp_of_replacements)
+    replacements_lcsh = read_csv(parameters["replacements_file"])
     replacements = generate_replacements(replacements_lcsh)
 
     ops = DeltasGenerator(

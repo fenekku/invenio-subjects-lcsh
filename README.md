@@ -62,16 +62,19 @@ Alternatively, or if you want to update your already loaded subjects to a new li
 ```bash
 # In your instance's project
 # Download up-to-date listings
-invenio galter_subjects lcsh download -d /path/to/downloads/storage/
-# Generate deprecated entries - metadata expert COULD look at them
-invenio galter_subjects lcsh deprecated /path/to/downloads/storage/subjects.skosrdf.jsonld --output-file /path/to/deprecated.csv
-# Generate replacement entries from those - metadata expert COULD look at them
-invenio galter_subjects lcsh replacements /path/to/deprecated.csv --output-file /path/to/replacements.csv
+invenio galter_subjects lcsh download -d /path/to/downloads/
+# Generate replacement entries from those - metadata expert SHOULD look at them
+invenio galter_subjects lcsh replacements -d /path/to/downloads/ -o /path/to/replacements_lcsh.csv --since YYYY-MM-DD
 # Generate file containing deltas to transition your instance to the downloaded listing - metadata expert SHOULD look at them
-invenio galter_subjects lcsh deltas --subjects-file /path/to/downloads/storage/subjects.skosrdf.jsonld --replacements-file /path/to/replacements.csv -o /path/to/deltas_lcsh.csv
+invenio galter_subjects lcsh deltas -r /path/to/replacements_lcsh.csv -o /path/to/deltas_lcsh.csv
 # Update your instance - *this operation will modify your instance*
 invenio galter_subjects update /path/to/deltas_lcsh.csv
 ```
+
+> [!WARNING]
+> Both `galter_subjects lcsh replacements` and `galter_subjects lcsh deltas` use the vendored subjects
+> file as a source of label for replacement subjects. This could be out-of-steps with a fresh download,
+> so use `--lcsh <path to fresh subjects file>` to override it if need be.
 
 Look at the help text for these commands to see additional options that can be passed.
 In particular, options for `galter_subjects update` allow you to store renamed, replaced or removed subjects on records according to a template of your choice.
