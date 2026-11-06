@@ -9,7 +9,7 @@
 
 from itertools import chain, takewhile
 
-from .scheme import LCSHScheme
+from .scheme import LCSHScheme, identify_scheme
 
 
 def to_rdm_id(id_of_subject):
@@ -73,9 +73,15 @@ class LCSHReplacementConverter:
             "time": entry["deprecated"]["time"],
             "id": to_rdm_id(entry["id"]),
             "subject": entry["label"],
-            "new_id": "\n".join([
-                to_rdm_id(rid) for rid in entry["deprecated"]["replacements"]
-            ]),
+            "new_id": "\n".join(
+                [to_rdm_id(rid) for rid in entry["deprecated"]["replacements"]]
+            ),
+            "new_scheme": "\n".join(
+                [
+                    identify_scheme(to_rdm_id(rid))
+                    for rid in entry["deprecated"]["replacements"]
+                ]
+            ),
             "new_subject": "",  # don't bother in this pass, enhanced later
             "notes": entry["deprecated"]["note"],
         }

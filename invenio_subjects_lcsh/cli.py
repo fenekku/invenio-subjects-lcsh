@@ -108,11 +108,10 @@ def lcsh_file(**parameters):
     type=click.Path(path_type=Path),
     default=Path(__file__).parent / "vocabularies/subjects_lcsh.csv",
 )
-# Coming in next PR
-# @click.option(
-#     "--lcnaf",
-#     type=click.Path(path_type=Path),
-# )
+@click.option(
+    "--lcnaf",
+    type=click.Path(path_type=Path),
+)
 @click.option(
     "--since",
     "-s",
@@ -130,8 +129,8 @@ def lcsh_replacements(**parameters):
 
     This file is then parsed by a metadata expert and potentially edited
     for subsequent use in lcsh_deltas. In particular, metadata experts
-    should select the id + subject (if any) to replace a deprecated heading
-    that has no or multiple replacement options for each such heading.
+    should select the id-scheme-subject (if any) to replace each deprecated
+    heading that has no or multiple replacement options.
     """
     downloader = LCSHDownloader(directory=parameters["downloads_dir"])
 
@@ -157,13 +156,23 @@ def lcsh_replacements(**parameters):
     sources_for_new_subject_labels = [
         read_csv(parameters["lcsh"]),
     ]
+    if parameters["lcnaf"]:
+        sources_for_new_subject_labels.append(read_csv(parameters["lcnaf"]))
 
     converter = LCSHReplacementConverter(
         reader.iter_internal_entries(),
         sources_for_new_subject_labels
     )
 
-    header = ["time", "id", "subject", "new_id", "new_subject", "notes"]
+    header = [
+        "time",
+        "id",
+        "subject",
+        "new_id",
+        "new_scheme",
+        "new_subject",
+        "notes",
+    ]
 
     write_csv(
         converter.iter_replacements(),  # all in memory anyway

@@ -151,4 +151,18 @@ def deprecated_internal_entries():
             },
             "collections": [],
         },
+        # Variation: LCNAF replacement
+        {
+            "id": "http://id.loc.gov/authorities/subjects/sh98006437",
+            "label": "Calvin (Fictitious character : Watterson)",  # noqa
+            "deprecated": {
+                "status": True,
+                "note": "This authority record has been deleted because the subject heading is covered by the name heading {Calvin (Fictitious character from Watterson)} (DLC)no2020114212",  # noqa
+                "replacements": [
+                    "http://id.loc.gov/authorities/names/no2020114212",
+                ],
+                "time": "2026-05-27T13:37:37",
+            },
+            "collections": [],
+        },
     ]

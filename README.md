@@ -65,6 +65,8 @@ Alternatively, or if you want to update your already loaded subjects to a new li
 invenio galter_subjects lcsh download -d /path/to/downloads/
 # Generate replacement entries from those - metadata expert SHOULD look at them
 invenio galter_subjects lcsh replacements -d /path/to/downloads/ -o /path/to/replacements_lcsh.csv --since YYYY-MM-DD
+# Alternatively if you support LCNAF terms you can pass an LCNAF fixture file to have replacements fill those recommendations
+invenio galter_subjects lcsh replacements -d /path/to/downloads/ --lcnaf /path/to/subjects_lcnaf.csv -o /path/to/replacements_lcsh.csv --since YYYY-MM-DD
 # Generate file containing deltas to transition your instance to the downloaded listing - metadata expert SHOULD look at them
 invenio galter_subjects lcsh deltas -r /path/to/replacements_lcsh.csv -o /path/to/deltas_lcsh.csv
 # Update your instance - *this operation will modify your instance*

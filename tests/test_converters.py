@@ -73,6 +73,7 @@ def test_replacement_converter(deprecated_internal_entries):
             "time": "2023-01-23T12:01:15",
             "subject": "Computer games industry",
             "new_id": "https://id.loc.gov/authorities/subjects/sh2006005259",
+            "new_scheme": "LCSH",
             "new_subject": "Video games industry",
             "notes": "This authority record has been deleted because the heading is covered by the subject heading {Video games industry} (DLC)sh2006005259",  # noqa
         },
@@ -83,6 +84,7 @@ def test_replacement_converter(deprecated_internal_entries):
             "time": "2021-07-20T08:25:20",
             "subject": "Child concentration camp inmates",
             "new_id": "https://id.loc.gov/authorities/subjects/sh2021004026\nhttps://id.loc.gov/authorities/subjects/sh2021004027",  # noqa
+            "new_scheme": "LCSH\nLCSH",
             "new_subject": "Child internment camp inmates\nChild Nazi concentration camp inmates",  # noqa
             "notes": "This authority record has been deleted because the heading is covered by the subject headings {Child internment camp inmates} (DLC)sh2021004026 and {Child Nazi concentration camp inmates} (DLC)sh2021004027",  # noqa
         },
@@ -92,6 +94,7 @@ def test_replacement_converter(deprecated_internal_entries):
             "time": "2023-01-23T12:01:15",
             "subject": "Computer games--Law and legislation",
             "new_id": "https://id.loc.gov/authorities/subjects/sh85143203",
+            "new_scheme": "LCSH",
             "new_subject": "Video games--Law and legislation",
             "notes": "This authority record has been deleted because the heading is covered by the subject heading {Video games--Law and legislation} (DLC)sh 85143203",  # noqa
         },
@@ -101,23 +104,51 @@ def test_replacement_converter(deprecated_internal_entries):
             "time": "2023-09-29T18:42:32",
             "subject": "Evangelisch-Lutherse Kerk (Netherlands)--Relations--Nederlandse Hervormde Kerk",  # noqa
             "new_id": "https://id.loc.gov/authorities/subjects/sh2022001319",
+            "new_scheme": "LCSH",
             "new_subject": "Evangelisch Luthersche Kerk (Netherlands)--Relations--Nederlandse Hervormde Kerk",  # noqa
             "notes": "This authority record has been deleted because the heading is covered by an identical subject heading (DLC)sh2022001319",  # noqa
+        },
+        # Variation: LCNAF replacement but no LCNAF source
+        {
+            "id": "https://id.loc.gov/authorities/subjects/sh98006437",
+            "time": "2026-05-27T13:37:37",
+            "subject": "Calvin (Fictitious character : Watterson)",
+            "new_id": "https://id.loc.gov/authorities/names/no2020114212",
+            "new_scheme": "LCNAF",
+            "new_subject": "",  # because no LCNAF source
+            "notes": "This authority record has been deleted because the subject heading is covered by the name heading {Calvin (Fictitious character from Watterson)} (DLC)no2020114212",  # noqa
         },
     ]
     assert expected == replacements
 
 
-#         {
-#             "id": "https://id.loc.gov/authorities/subjects/sh2022001344",
-#             "time": "2023-09-29T18:42:32",
-#             "subject": "Evangelisch-Lutherse Kerk (Netherlands)--
-# Relations--Nederlandse Hervormde Kerk",
-#             "new_id": "https://id.loc.gov/authorities/subjects/sh2022001319",
-#             "new_subject": "Evangelisch Luthersche Kerk (Netherlands)--
-# Relations--Nederlandse Hervormde Kerk",
-#             "notes": "This authority record has been deleted because the
-# heading is covered by an identical subject heading (DLC)sh2022001319",
-#         },
-#     ]
-#     assert expected == replacements
+def test_replacement_converter_w_lcnaf(deprecated_internal_entries):
+    filepath_subjects_lcsh = (
+        Path(__file__).parent / "data" / "fake_subjects_lcsh.csv"
+    )
+    filepath_subjects_lcnaf = (
+        Path(__file__).parent / "data" / "fake_subjects_lcnaf.csv"
+    )
+    sources_for_new_subject_labels = [
+        read_csv(filepath_subjects_lcsh),
+        read_csv(filepath_subjects_lcnaf),
+    ]
+
+    converter = LCSHReplacementConverter(
+        deprecated_internal_entries,
+        sources_for_new_subject_labels,
+    )
+
+    replacements = list(converter.iter_replacements())
+
+    expected = {
+        "id": "https://id.loc.gov/authorities/subjects/sh98006437",
+        "time": "2026-05-27T13:37:37",
+        "subject": "Calvin (Fictitious character : Watterson)",
+        "new_id": "https://id.loc.gov/authorities/names/no2020114212",
+        "new_scheme": "LCNAF",
+        # Filled because do have an LCNAF source
+        "new_subject": "Calvin (Fictitious character : Watterson)",
+        "notes": "This authority record has been deleted because the subject heading is covered by the name heading {Calvin (Fictitious character from Watterson)} (DLC)no2020114212",  # noqa
+    }
+    assert expected == replacements[-1]
