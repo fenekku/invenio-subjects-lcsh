@@ -79,7 +79,7 @@ line-length = 79
 extend-select = ["D", "E", "I", "W"]
 # RUF100: unused noqa -> bug with ruff's understanding of line length
 # D401: imperative docstring -> too pedantic
-# D403: first word capitablized -> doesn't work with first words that start with capital but have other capital letters in them
+# D403: first word capitalized -> doesn't work with first words that start with capital but have other capital letters in them
 ignore = ["RUF100", "D401", "D403"]
 
 [tool.ruff.lint.pydocstyle]
